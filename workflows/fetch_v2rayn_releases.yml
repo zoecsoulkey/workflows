@@ -33,6 +33,7 @@ jobs:
           echo '${{ steps.get_releases.outputs.result }}'
 
       - name: Download and Save Releases
+        id: download_and_save_releases
         run: |
           mkdir -p releases
           has_new_content=false  # 标记是否有新内容
@@ -57,12 +58,9 @@ jobs:
             fi
           done
 
-          # 如果没有新内容，则退出步骤
-          if [ "$has_new_content" = false ]; then
-            echo "No new content downloaded. Exiting without commit."
-            exit 0
-          fi
-          
+          # 设置输出参数，以便在下一个步骤中使用
+          echo "::set-output name=has_new_content::$has_new_content"
+
       - name: Commit and Push Changes
         if: steps.download_and_save_releases.outputs.has_new_content == 'true'
         run: |
