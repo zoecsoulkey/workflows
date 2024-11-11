@@ -56,7 +56,7 @@ jobs:
           done
           
           # 更新标记文件，指示此工作流已运行
-          echo "Updated at $(date)" > releases/.last_updated
+          echo "Workflow last run at $(date)" > releases/.last_run
 
       - name: Check for Changes and Commit
         run: |
