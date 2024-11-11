@@ -21,7 +21,7 @@ jobs:
             const releases = await github.rest.repos.listReleases({
               owner: '2dust',
               repo: 'v2rayN',
-              per_page: 5  // 获取最近5次的release
+              per_page: 5
             });
             return releases.data.map(release => ({
               tag_name: release.tag_name,
@@ -54,6 +54,9 @@ jobs:
               echo "No download URL for release $tag_name, skipping."
             fi
           done
+          
+          # 更新标记文件，指示此工作流已运行
+          echo "Updated at $(date)" > releases/.last_updated
 
       - name: Check for Changes and Commit
         run: |
