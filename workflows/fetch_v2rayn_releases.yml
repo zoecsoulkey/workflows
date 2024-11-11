@@ -35,6 +35,7 @@ jobs:
       - name: Download and Save Releases
         run: |
           mkdir -p releases
+          has_new_content=false  # 标记是否有新内容
           for release in $(echo '${{ steps.get_releases.outputs.result }}' | jq -c '.[]'); do
             tag_name=$(echo "$release" | jq -r '.tag_name')
             download_url=$(echo "$release" | jq -r '.download_url')
@@ -50,22 +51,25 @@ jobs:
               mkdir -p releases/"$tag_name"
               wget -O releases/"$tag_name"/v2rayN.zip "$download_url"
               echo "Downloaded release $tag_name."
+              has_new_content=true  # 记录新内容
             else
               echo "No download URL for release $tag_name, skipping."
             fi
           done
+
+          # 如果没有新内容，则退出步骤
+          if [ "$has_new_content" = false ]; then
+            echo "No new content downloaded. Exiting without commit."
+            exit 0
+          fi
           
       - name: Commit and Push Changes
+        if: steps.download_and_save_releases.outputs.has_new_content == 'true'
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          # 检查是否有变化
-          if [ -n "$(git status --porcelain)" ]; then
-            git add releases
-            git commit -m "Update v2rayN releases"
-            git push
-          else
-            echo "No changes to commit."
-          fi
+          git add releases
+          git commit -m "Update v2rayN releases"
+          git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
