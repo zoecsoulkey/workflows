@@ -2,8 +2,8 @@ name: Fetch v2rayN Releases
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # 每天 00:00 UTC 执行一次
-  workflow_dispatch:  # 手动触发
+    - cron: '0 0 * * 0'   # 每周日 00:00 UTC 运行一次
+  workflow_dispatch:      # 手动触发
 
 jobs:
   fetch-latest-releases:
@@ -32,20 +32,13 @@ jobs:
         run: |
           echo '${{ steps.get_releases.outputs.result }}'
 
-      - name: Download and Save Releases
+      - name: Download Releases
         run: |
           mkdir -p releases
           for release in $(echo '${{ steps.get_releases.outputs.result }}' | jq -c '.[]'); do
             tag_name=$(echo "$release" | jq -r '.tag_name')
             download_url=$(echo "$release" | jq -r '.download_url')
 
-            # 检查是否存在该版本文件夹
-            if [ -d "releases/$tag_name" ]; then
-              echo "Release $tag_name already exists, skipping download."
-              continue
-            fi
-
-            # 下载 release 文件到对应版本文件夹
             if [ "$download_url" != "null" ]; then
               mkdir -p releases/"$tag_name"
               wget -O releases/"$tag_name"/v2rayN.zip "$download_url"
@@ -54,23 +47,13 @@ jobs:
               echo "No download URL for release $tag_name, skipping."
             fi
           done
-          
-          # 更新标记文件，指示此工作流已运行
-          echo "Workflow last run at $(date)" > releases/.last_run
 
-      - name: Check for Changes and Commit
-        run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          
-          # 检查是否有更改
-          if git diff-index --quiet HEAD --; then
-            echo "No changes detected, skipping commit."
-            exit 0
-          fi
-          
-          git add releases
-          git commit -m "Update v2rayN releases"
-          git push
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v2rayN-sync-$(date +'%Y%m%d')
+          name: "v2rayN Sync $(date +'%Y-%m-%d')"
+          body: "Automated sync of latest v2rayN releases."
+          files: releases/*/*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
